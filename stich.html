@@ -115,10 +115,16 @@
             border-radius: 50%;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), clip-path 0.2s ease;
             box-shadow: inset 0 -6px 12px rgba(0,0,0,0.08), 0 8px 15px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
         }
-        .macaron-pillowy[data-bite-level="1"] { clip-path: polygon(0 0, 100% 0, 100% 80%, 70% 85%, 62% 100%, 0 100%); }
-        .macaron-pillowy[data-bite-level="2"] { clip-path: polygon(0 0, 100% 0, 100% 65%, 55% 70%, 47% 100%, 0 100%); }
-        .macaron-pillowy[data-bite-level="3"] { clip-path: polygon(0 0, 100% 0, 100% 50%, 40% 55%, 34% 100%, 0 100%); }
+        .macaron-pillowy .crumbs { position: absolute; inset: 0; pointer-events: none; }
+        .macaron-pillowy .crumb { position: absolute; width: 5px; height: 5px; border-radius: 999px; background: rgba(83, 58, 33, 0.95); opacity: 0; transform: scale(0.8); transition: opacity 0.18s ease, transform 0.18s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .macaron-pillowy[data-bite-level="1"] { clip-path: polygon(0 0, 100% 0, 100% 80%, 78% 86%, 70% 100%, 0 100%); }
+        .macaron-pillowy[data-bite-level="2"] { clip-path: polygon(0 0, 100% 0, 100% 65%, 68% 75%, 60% 100%, 0 100%); }
+        .macaron-pillowy[data-bite-level="3"] { clip-path: polygon(0 0, 100% 0, 100% 50%, 60% 60%, 52% 100%, 0 100%); }
+        .macaron-pillowy[data-bite-level="4"] { clip-path: polygon(0 0, 100% 0, 100% 35%, 50% 47%, 40% 100%, 0 100%); }
+        .macaron-pillowy[data-bite-level="5"] { clip-path: polygon(20% 0, 100% 0, 100% 20%, 80% 40%, 58% 100%, 0 100%); }
         
         .macaron-btn:hover .macaron-pillowy {
             transform: scale(1.08) translateY(-4px);
@@ -316,11 +322,54 @@
     crunchOsc.stop(now + 0.16);
   }
 
+  function createCrumbs(macaron) {
+    if (!macaron || macaron.querySelector('.crumbs')) return;
+    const crumbHolder = document.createElement('div');
+    crumbHolder.className = 'crumbs';
+    const positions = [
+      {left: '72%', top: '14%'},
+      {left: '86%', top: '24%'},
+      {left: '82%', top: '42%'},
+      {left: '71%', top: '58%'},
+      {left: '62%', top: '74%'},
+    ];
+    positions.forEach(pos => {
+      const crumb = document.createElement('div');
+      crumb.className = 'crumb';
+      crumb.style.left = pos.left;
+      crumb.style.top = pos.top;
+      crumb.style.width = '5px';
+      crumb.style.height = '5px';
+      crumb.style.position = 'absolute';
+      crumbHolder.append(crumb);
+    });
+    macaron.append(crumbHolder);
+  }
+
+  function setCrumbs(macaron, level) {
+    if (!macaron) return;
+    const crumbs = macaron.querySelectorAll('.crumb');
+    crumbs.forEach((crumb, i) => {
+      if (i < Math.max(0, level - 1)) {
+        crumb.style.opacity = '1';
+        crumb.style.transform = 'scale(1)';
+      } else {
+        crumb.style.opacity = '0';
+        crumb.style.transform = 'scale(0.8)';
+      }
+    });
+  }
+
   function initializeMacarons() {
     document.querySelectorAll('.macaron-btn').forEach(button => {
-      button.dataset.bites = '3';
+      button.dataset.bites = '5';
+      button.dataset.maxBites = '5';
       const macaron = button.querySelector('.macaron-pillowy');
-      if (macaron) macaron.dataset.biteLevel = '0';
+      if (macaron) {
+        macaron.dataset.biteLevel = '0';
+        createCrumbs(macaron);
+        setCrumbs(macaron, 0);
+      }
     });
   }
 
@@ -332,13 +381,15 @@
       playMunchSound();
 
       const macaron = button.querySelector('.macaron-pillowy');
-      let remaining = parseInt(button.dataset.bites || '3', 10);
+      let remaining = parseInt(button.dataset.bites || '5', 10);
       remaining = Math.max(0, remaining - 1);
       button.dataset.bites = remaining;
 
       if (macaron) {
-        const level = 4 - remaining;
-        macaron.dataset.biteLevel = Math.min(level, 3).toString();
+        const maxBites = parseInt(button.dataset.maxBites || '5', 10);
+        const level = Math.min(maxBites - remaining, maxBites);
+        macaron.dataset.biteLevel = level.toString();
+        setCrumbs(macaron, level);
       }
 
       if (remaining <= 0) {
